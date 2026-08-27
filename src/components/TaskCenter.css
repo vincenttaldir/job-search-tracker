@@ -1,0 +1,63 @@
+.task-center-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.80);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.task-center-btn:hover {
+  background: rgba(255,255,255,0.18);
+  color: #ffffff;
+}
+
+.task-center-btn--running {
+  background: rgba(82,189,148,0.18);
+  color: #52BD94;
+}
+
+.task-center-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  background: #D14343;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  padding: 0 3px;
+  pointer-events: none;
+}
+
+.task-item {
+  cursor: default;
+  transition: background 0.12s ease;
+}
+
+.task-item--clickable {
+  cursor: pointer;
+}
+
+.task-item--clickable:hover {
+  background: #f5f7fa;
+}
+
+.task-item--unread {
+  background: #fffbf0;
+}
+
+.task-item--unread:hover {
+  background: #fff5d6;
+}

@@ -1,0 +1,155 @@
+/* ─── App shell ──────────────────────────────────────────────────── */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #f5f6fa;
+}
+
+/* ─── Topbar ──────────────────────────────────────────────────────── */
+.topbar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 0 24px;
+  height: 60px;
+  background: #101840;           /* Evergreen N900 */
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.06), 0 4px 16px rgba(0,0,0,0.25);
+}
+
+/* ─── Brand ───────────────────────────────────────────────────────── */
+.brand-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  width: fit-content;
+}
+
+.brand-link:hover {
+  text-decoration: none;
+}
+
+.brand-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #52BD94 0%, #0d9b8a 100%);
+  flex-shrink: 0;
+}
+
+.brand-text {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.brand-text span {
+  color: #52BD94;
+}
+
+/* ─── Nav ─────────────────────────────────────────────────────────── */
+.topbar-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 10px;
+  padding: 4px;
+}
+
+.nav-link {
+  padding: 6px 14px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.62);
+  text-decoration: none;
+  border-radius: 7px;
+  transition: background 160ms ease, color 160ms ease;
+  white-space: nowrap;
+}
+
+.nav-link:hover {
+  color: rgba(255,255,255,0.92);
+  background: rgba(255,255,255,0.10);
+  text-decoration: none;
+}
+
+.nav-link.nav-active {
+  color: #ffffff;
+  font-weight: 600;
+  background: rgba(255,255,255,0.16);
+}
+
+/* ─── Right slot (TaskCenter + future actions) ────────────────────── */
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ─── Main content ────────────────────────────────────────────────── */
+.content {
+  flex: 1;
+  padding: 28px 32px;
+  max-width: 1320px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ─── Responsive ──────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .topbar {
+    grid-template-columns: auto 1fr auto;
+    gap: 12px;
+    padding: 0 16px;
+  }
+
+  .nav-link {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+
+  .content {
+    padding: 20px 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  .topbar {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    height: auto;
+    padding: 10px 16px;
+    gap: 10px;
+  }
+
+  .topbar-nav {
+    grid-column: 1 / -1;
+    justify-content: center;
+  }
+
+  .topbar-actions {
+    grid-row: 1;
+    grid-column: 2;
+  }
+
+  .nav-link {
+    padding: 6px 10px;
+    font-size: 12.5px;
+  }
+
+  .content {
+    padding: 16px 12px;
+  }
+}
