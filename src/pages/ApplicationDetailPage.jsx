@@ -23,6 +23,7 @@ import { StatusPill } from '../components/StatusPill';
 import { CVScoreBadge, parseCVBreakdown, getScoreColor, getScoreLabel } from '../components/CVScoreBadge';
 import { ApplicationForm } from './ApplicationForm';
 import { CvRefineDialog } from '../components/CvRefineDialog';
+import { CvPreQuestionsDialog } from '../components/CvPreQuestionsDialog';
 
 // ── Small helpers ──────────────────────────────────────────────────────────────
 
@@ -69,6 +70,10 @@ export function ApplicationDetailPage() {
   const [genMsg, setGenMsg] = useState(null);
   const [refineOpen, setRefineOpen] = useState(false);
   const [genTick, setGenTick] = useState(0);
+  // Pre-generation questions (asked before the first CV draft; answers feed it + memory)
+  const [preQOpen, setPreQOpen] = useState(false);
+  const [preQuestions, setPreQuestions] = useState([]);
+  const [preQLoading, setPreQLoading] = useState(false);
   // Actions ported from the legacy detail page
   const [actionMsg, setActionMsg] = useState(null); // { intent, text }
   const [scoreLoading, setScoreLoading] = useState(false);
@@ -134,14 +139,37 @@ export function ApplicationDetailPage() {
     }
   };
 
-  const handleGenerateCv = async () => {
+  // Step 1: fetch the pre-generation questions. If the memory feature is enabled and returns
+  // questions, open the pre-questions dialog; otherwise generate directly (previous behaviour).
+  const startCvGeneration = async () => {
+    setGenMsg(null);
+    setPreQLoading(true);
     try {
+      const res = await fetch(`/api/applications/${id}/cv-pre-questions`, { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      const qs = res.ok && data.enabled && Array.isArray(data.questions) ? data.questions : [];
+      if (qs.length > 0) {
+        setPreQuestions(qs);
+        setPreQOpen(true);
+        return;
+      }
+    } catch {
+      // fall through to direct generation on any error
+    } finally {
+      setPreQLoading(false);
+    }
+    handleGenerateCv();
+  };
+
+  const handleGenerateCv = async (answers) => {
+    try {
+      setPreQOpen(false);
       setGenLoading(true);
       setGenMsg(null);
       const response = await fetch(`/api/applications/${id}/generate-cv`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify(Array.isArray(answers) && answers.length ? { answers } : {}),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Erreur lors de la génération du CV');
@@ -361,7 +389,7 @@ export function ApplicationDetailPage() {
 
           <Field label="CV adapté à l'offre">
             <Pane display="flex" gap={8} alignItems="center">
-              <Button appearance="primary" isLoading={genLoading} onClick={handleGenerateCv}>
+              <Button appearance="primary" isLoading={genLoading || preQLoading} onClick={startCvGeneration}>
                 ✨ Générer le CV adapté
               </Button>
               {app.cv_file_url && app.cv_source === 'generated' && (
@@ -601,6 +629,15 @@ export function ApplicationDetailPage() {
         initialData={app}
         isLoading={formLoading}
         companies={companies}
+      />
+
+      <CvPreQuestionsDialog
+        isShown={preQOpen}
+        questions={preQuestions}
+        isGenerating={genLoading}
+        onGenerate={(answers) => handleGenerateCv(answers)}
+        onSkip={() => handleGenerateCv()}
+        onClose={() => setPreQOpen(false)}
       />
 
       <CvRefineDialog
