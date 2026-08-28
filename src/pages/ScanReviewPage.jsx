@@ -9,6 +9,7 @@ import {
   Alert,
   Spinner,
   Card,
+  Checkbox,
   IconButton,
   TickCircleIcon,
   CrossIcon,
@@ -28,14 +29,15 @@ const REJECTION_REASONS = [
   'Autre',
 ];
 
-function OfferCard({ offer, onAccept, onReject, isProcessing }) {
+function OfferCard({ offer, onAccept, onReject, isProcessing, selected, onToggleSelect }) {
   const [rejectMode, setRejectMode] = useState(false);
   const [reason, setReason] = useState('Autre');
 
   return (
     <Card
       elevation={1}
-      background="#fff"
+      background={selected ? '#fef6f6' : '#fff'}
+      border={selected ? '1px solid #ee9c9c' : '1px solid transparent'}
       padding={20}
       borderRadius={8}
       display="flex"
@@ -46,18 +48,28 @@ function OfferCard({ offer, onAccept, onReject, isProcessing }) {
     >
       {/* Header */}
       <Pane display="flex" justifyContent="space-between" alignItems="flex-start" gap={12}>
-        <Pane flex={1}>
-          <Text size={500} fontWeight={700} display="block" marginBottom={4}>
-            {offer.job_title}
-          </Text>
-          <Pane display="flex" alignItems="center" gap={8} flexWrap="wrap">
-            <Badge color="blue">{offer.company_name}</Badge>
-            {offer.location && (
-              <Pane display="flex" alignItems="center" gap={4}>
-                <MapMarkerIcon color="#999" size={12} />
-                <Text size={300} color="#666">{offer.location}</Text>
-              </Pane>
-            )}
+        <Pane display="flex" alignItems="flex-start" gap={12} flex={1}>
+          <Checkbox
+            margin={0}
+            marginTop={2}
+            checked={selected}
+            onChange={(e) => onToggleSelect(offer.key, e.target.checked)}
+            disabled={isProcessing}
+            title="Sélectionner pour un rejet groupé"
+          />
+          <Pane flex={1}>
+            <Text size={500} fontWeight={700} display="block" marginBottom={4}>
+              {offer.job_title}
+            </Text>
+            <Pane display="flex" alignItems="center" gap={8} flexWrap="wrap">
+              <Badge color="blue">{offer.company_name}</Badge>
+              {offer.location && (
+                <Pane display="flex" alignItems="center" gap={4}>
+                  <MapMarkerIcon color="#999" size={12} />
+                  <Text size={300} color="#666">{offer.location}</Text>
+                </Pane>
+              )}
+            </Pane>
           </Pane>
         </Pane>
         {offer.job_link && (
@@ -142,6 +154,9 @@ export function ScanReviewPage() {
   const [processing, setProcessing] = useState({}); // key → bool
   const [error, setError] = useState(null);
   const [toast, setToast] = useState(null); // {intent, text}
+  const [selected, setSelected] = useState(() => new Set()); // keys picked for bulk reject
+  const [bulkReason, setBulkReason] = useState('Autre');
+  const [bulkProcessing, setBulkProcessing] = useState(false);
 
   const fetchPending = useCallback(async () => {
     try {
@@ -158,6 +173,29 @@ export function ScanReviewPage() {
   }, []);
 
   useEffect(() => { fetchPending(); }, [fetchPending]);
+
+  // Drop selection entries whose offer is no longer in the list (accepted/rejected elsewhere).
+  useEffect(() => {
+    setSelected((prev) => {
+      if (prev.size === 0) return prev;
+      const live = new Set(offers.map((o) => o.key));
+      const next = new Set([...prev].filter((k) => live.has(k)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [offers]);
+
+  const toggleSelect = (key, checked) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(key); else next.delete(key);
+      return next;
+    });
+  };
+
+  const allSelected = offers.length > 0 && selected.size === offers.length;
+  const toggleSelectAll = (checked) => {
+    setSelected(checked ? new Set(offers.map((o) => o.key)) : new Set());
+  };
 
   const handleAccept = async (key) => {
     setProcessing((p) => ({ ...p, [key]: true }));
@@ -204,6 +242,30 @@ export function ScanReviewPage() {
     }
   };
 
+  const handleRejectBulk = async () => {
+    const keys = [...selected];
+    if (keys.length === 0) return;
+    setBulkProcessing(true);
+    try {
+      const res = await fetch('/api/scan/reject-bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keys, reason: bulkReason }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur');
+      const rejectedKeys = new Set(keys);
+      setOffers((prev) => prev.filter((o) => !rejectedKeys.has(o.key)));
+      setSelected(new Set());
+      const n = data.rejected ?? keys.length;
+      setToast({ intent: 'success', text: `${n} offre${n > 1 ? 's' : ''} rejetée${n > 1 ? 's' : ''} pour « ${bulkReason} ».` });
+    } catch (e) {
+      setToast({ intent: 'danger', text: e.message });
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
   const handleAcceptAll = async () => {
     for (const offer of offers) {
       await handleAccept(offer.key);
@@ -213,7 +275,10 @@ export function ScanReviewPage() {
   const handleClearAll = async () => {
     await fetch('/api/scan/clear', { method: 'POST' });
     setOffers([]);
+    setSelected(new Set());
   };
+
+  const selectedCount = selected.size;
 
   return (
     <Pane maxWidth={760} margin="0 auto">
@@ -295,6 +360,59 @@ export function ScanReviewPage() {
         </Pane>
       )}
 
+      {/* Multi-select toolbar */}
+      {!loading && offers.length > 0 && (
+        <Pane
+          display="flex"
+          alignItems="center"
+          gap={12}
+          flexWrap="wrap"
+          marginBottom={12}
+          padding={selectedCount > 0 ? 12 : 0}
+          background={selectedCount > 0 ? '#fdf4f4' : 'transparent'}
+          border={selectedCount > 0 ? '1px solid #f3caca' : 'none'}
+          borderRadius={8}
+        >
+          <Checkbox
+            margin={0}
+            label={allSelected ? 'Tout désélectionner' : 'Tout sélectionner'}
+            checked={allSelected}
+            indeterminate={selectedCount > 0 && !allSelected}
+            onChange={(e) => toggleSelectAll(e.target.checked)}
+          />
+          {selectedCount > 0 && (
+            <>
+              <Text size={300} color="#7a3535" fontWeight={600}>
+                {selectedCount} sélectionnée{selectedCount > 1 ? 's' : ''}
+              </Text>
+              <Pane flex={1} />
+              <Text size={300} color="#666" flexShrink={0}>Rejeter avec :</Text>
+              <Select
+                value={bulkReason}
+                onChange={(e) => setBulkReason(e.target.value)}
+                width={220}
+                height={32}
+                disabled={bulkProcessing}
+              >
+                {REJECTION_REASONS.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </Select>
+              <Button
+                intent="danger"
+                appearance="primary"
+                iconBefore={CrossIcon}
+                onClick={handleRejectBulk}
+                isLoading={bulkProcessing}
+                disabled={bulkProcessing}
+              >
+                Rejeter la sélection ({selectedCount})
+              </Button>
+            </>
+          )}
+        </Pane>
+      )}
+
       {/* Offer list */}
       {!loading && offers.length > 0 && (
         <Pane display="flex" flexDirection="column" gap={12}>
@@ -304,7 +422,9 @@ export function ScanReviewPage() {
               offer={offer}
               onAccept={handleAccept}
               onReject={handleReject}
-              isProcessing={!!processing[offer.key]}
+              isProcessing={!!processing[offer.key] || bulkProcessing}
+              selected={selected.has(offer.key)}
+              onToggleSelect={toggleSelect}
             />
           ))}
         </Pane>
