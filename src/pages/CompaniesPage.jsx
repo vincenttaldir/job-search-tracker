@@ -140,24 +140,13 @@ export function CompaniesPage() {
 
   const missingJobsCount = companies.filter((company) => !hasJobsLink(company)).length;
 
-  const getSizeColor = (size) => {
-    const colors = {
-      startup: 'blue',
-      small: 'green',
-      medium: 'yellow',
-      large: 'orange',
-    };
-    return colors[size] || 'neutral';
-  };
-
-  const getSizeLabel = (size) => {
-    const labels = {
-      startup: 'Startup',
-      small: 'Petite',
-      medium: 'Moyenne',
-      large: 'Grande',
-    };
-    return labels[size] || 'N/A';
+  // Number of job offers identified during the last career-page scan:
+  // PM-matched offers over the total job links detected (e.g. "3 / 25").
+  const formatJobOffers = (company) => {
+    const pm = company.last_scan_pm_offers;
+    const total = company.last_scan_job_links_detected;
+    if (pm == null && total == null) return 'N/A';
+    return `${pm ?? 0} / ${total ?? 0}`;
   };
 
   return (
@@ -232,7 +221,7 @@ export function CompaniesPage() {
           <Table.Head>
             <Table.TextHeaderCell>Nom</Table.TextHeaderCell>
             <Table.TextHeaderCell>Localisation</Table.TextHeaderCell>
-            <Table.TextHeaderCell>Taille</Table.TextHeaderCell>
+            <Table.TextHeaderCell>Nbre offre emploi</Table.TextHeaderCell>
             <Table.TextHeaderCell>Site web</Table.TextHeaderCell>
             <Table.TextHeaderCell>Offres d'emploi</Table.TextHeaderCell>
             <Table.TextHeaderCell>Télétravail</Table.TextHeaderCell>
@@ -243,15 +232,7 @@ export function CompaniesPage() {
               <Table.Row key={company.id}>
                 <Table.TextCell fontWeight="500">{company.name}</Table.TextCell>
                 <Table.TextCell>{company.location || 'N/A'}</Table.TextCell>
-                <Table.TextCell>
-                  {company.size ? (
-                    <Badge color={getSizeColor(company.size)}>
-                      {getSizeLabel(company.size)}
-                    </Badge>
-                  ) : (
-                    'N/A'
-                  )}
-                </Table.TextCell>
+                <Table.TextCell>{formatJobOffers(company)}</Table.TextCell>
                 <Table.TextCell>
                   {company.website ? (
                     <a href={company.website} target="_blank" rel="noreferrer">
